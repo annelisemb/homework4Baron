@@ -1,0 +1,124 @@
+---
+title: "homework4Baron"
+format: html
+---
+
+## setup
+
+```{r}
+library(tidyverse)
+library(tidytext)
+library(RedditExtractoR)
+```
+
+## 1
+
+```{r}
+#| eval: false
+top_newgirl_urls <- find_thread_urls(subreddit = "newgirl", sort_by = "top")
+write_rds(top_newgirl_urls, "top_newgirl_urls.rds")
+
+#str(top_newgirl_urls)
+```
+
+```{r}
+top_newgirl_urls <- read_rds("top_newgirl_urls.rds")
+```
+
+```{r}
+newgirl_words <- top_newgirl_urls %>%
+  unnest_tokens(word, title)
+```
+
+```{r}
+newgirl_words <- newgirl_words %>% 
+  anti_join(stop_words)
+```
+
+```{r}
+newgirl_freq <- newgirl_words %>% 
+  group_by(timestamp) %>%
+  count(word, sort = TRUE)
+```
+
+```{r}
+newgirl_idf <- newgirl_freq %>% 
+  bind_tf_idf(word, timestamp, n)
+```
+
+```{r}
+newgirl_idf %>%
+  select(word, tf_idf) %>% 
+  arrange(desc(tf_idf))
+```
+
+I can't get this to look right!
+```{r}
+newgirl_idf %>%
+  #group_by(timestamp) %>% 
+  arrange(desc(tf_idf)) %>%
+  ggplot(aes(x = tf_idf, y = reorder(word, tf_idf), fill = timestamp)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(~timestamp, scales = "free") +
+  theme_minimal()
+```
+
+## 2
+
+```{r}
+user <- "tomhenc"
+tomhenc_user <- get_user_content(user)
+str(tomhenc_user[[user]]$about)
+
+write_rds(tomhenc_user, "tomhenc_user.rds")
+tomhenc_user <- read_rds("tomhenc_user.rds")
+```
+
+```{r}
+str(tomhenc_user[[user]]$comments)
+```
+
+```{r}
+tommy <- tibble(json = tomhenc_user)
+tommy
+```
+
+```{r}
+df_tommy <- tommy %>%
+  unnest_wider(json)%>%
+  #unnest_wider(about) %>%
+  unnest_longer(comments)
+  #unnest_longer(threads)
+```
+
+```{r}
+df_tommy_words <- df_tommy %>%
+  unnest_tokens(word, comments_id)
+```
+
+```{r}
+df_tommy_words <- df_tommy_words %>%
+  anti_join(stop_words)
+```
+
+```{r}
+tommy_freq <- df_tommy_words %>% 
+  group_by(comments) %>%
+  count(word, sort = TRUE)
+```
+
+```{r}
+library(wordcloud)
+
+tommy_freq %>%
+  with(wordcloud(word, n, min.freq = 2))
+```
+
+```{r}
+tommy_freq %>%
+  filter(n > 1) %>%
+  ggplot(aes(x = n, fill = word)) +
+  geom_histogram(binwidth = .5)
+```
+

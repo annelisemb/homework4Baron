@@ -1,6 +1,0 @@
----
-title: "homework4Baron"
-format: html
----
-
-
